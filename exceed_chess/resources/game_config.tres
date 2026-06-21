@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="GameConfigResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/game_config_resource.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+sp_values = {
+	"pawn": 1,
+	"knight": 3,
+	"bishop": 3,
+	"rook": 5,
+	"queen": 9,
+	"king": 0,
+	"mage": 3,
+	"dragon": 20,
+	"hydra": 40
+}
+sinister_turns = [50, 100, 150, 200]
+relic_points = 50
+island_sizes = {
+	"dragon": Vector2i(5, 5),
+	"hydra": Vector2i(7, 7)
+}
+bridge_build_turns = 2

@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="UpgradeDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/upgrade_definition.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/resources/ability_definition.gd" id="2"]
+
+[sub_resource type="Resource" id="stomp_ability"]
+script = ExtResource("2")
+id = "stomp"
+trigger = 1
+effect_type = 7
+effect_params = {}
+sp_cost = 0
+uses_per_turn = 1
+phase_required = 0
+
+[resource]
+script = ExtResource("1")
+id = "knight_stomp"
+display_name = "Stomper"
+sp_cost = 5
+phase_required = 0
+eligible_piece_tags = ["knight"]
+transforms_to = ""
+added_movement = []
+added_abilities = [SubResource("stomp_ability")]
+removed_ability_ids = []
+added_tags = ["stomper"]
+removed_tags = []

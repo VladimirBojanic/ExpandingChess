@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="UpgradeDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/upgrade_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "pawn_to_knight"
+display_name = "Promote: Knight"
+sp_cost = 3
+phase_required = 0
+eligible_piece_tags = ["pawn"]
+transforms_to = "knight"
+added_movement = []
+added_abilities = []
+removed_ability_ids = []
+added_tags = []
+removed_tags = []

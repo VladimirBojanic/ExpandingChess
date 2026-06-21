@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="UpgradeDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/upgrade_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "pawn_to_mage"
+display_name = "Convert to Mage"
+sp_cost = 8
+phase_required = 0
+eligible_piece_tags = ["pawn"]
+transforms_to = "mage"
+added_movement = []
+added_abilities = []
+removed_ability_ids = []
+added_tags = []
+removed_tags = []

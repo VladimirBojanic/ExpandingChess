@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="UpgradeDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/upgrade_definition.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/resources/movement_rule.gd" id="2"]
+
+[sub_resource type="Resource" id="knight_jump"]
+script = ExtResource("2")
+pattern = 2
+directions = [Vector2i(2,1),Vector2i(2,-1),Vector2i(-2,1),Vector2i(-2,-1),Vector2i(1,2),Vector2i(1,-2),Vector2i(-1,2),Vector2i(-1,-2)]
+max_range = 1
+capture_only = false
+move_only = false
+sweep_tags = []
+cone_width_per_step = 1
+cone_is_blocked = true
+
+[resource]
+script = ExtResource("1")
+id = "king_mounted"
+display_name = "Mounted King"
+sp_cost = 7
+phase_required = 0
+eligible_piece_tags = ["king"]
+transforms_to = ""
+added_movement = [SubResource("knight_jump")]
+added_abilities = []
+removed_ability_ids = []
+added_tags = ["mounted"]
+removed_tags = []

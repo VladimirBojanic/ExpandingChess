@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="UpgradeDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/upgrade_definition.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/resources/movement_rule.gd" id="2"]
+
+[sub_resource type="Resource" id="king_range_step"]
+script = ExtResource("2")
+pattern = 1
+directions = [Vector2i(1,0),Vector2i(-1,0),Vector2i(0,1),Vector2i(0,-1),Vector2i(1,1),Vector2i(1,-1),Vector2i(-1,1),Vector2i(-1,-1)]
+max_range = 1
+capture_only = false
+move_only = false
+sweep_tags = []
+cone_width_per_step = 1
+cone_is_blocked = true
+
+[resource]
+script = ExtResource("1")
+id = "bishop_vigilant"
+display_name = "Vigilant Bishop"
+sp_cost = 5
+phase_required = 0
+eligible_piece_tags = ["bishop"]
+transforms_to = ""
+added_movement = [SubResource("king_range_step")]
+added_abilities = []
+removed_ability_ids = []
+added_tags = ["vigilant"]
+removed_tags = []
