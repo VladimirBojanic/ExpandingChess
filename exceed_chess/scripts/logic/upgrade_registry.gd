@@ -72,6 +72,19 @@ func _transform(piece: PieceInstance, target_id: String, board: BoardManager) ->
 	EventBus.piece_promoted.emit(new_piece, piece.definition.id, target_id)
 	return new_piece
 
+# Spawn upgrades target no existing piece — they create a new unit.
+func get_spawn_upgrades(sp: int, game_phase: int) -> Array[UpgradeDefinition]:
+	var result: Array[UpgradeDefinition] = []
+	for upgrade in _all:
+		if not upgrade.eligible_piece_tags.is_empty():
+			continue
+		if upgrade.transforms_to == "":
+			continue
+		if upgrade.sp_cost > sp or upgrade.phase_required > game_phase:
+			continue
+		result.append(upgrade)
+	return result
+
 func _is_eligible(piece: PieceInstance, upgrade: UpgradeDefinition) -> bool:
 	if upgrade.eligible_piece_tags.is_empty():
 		return false

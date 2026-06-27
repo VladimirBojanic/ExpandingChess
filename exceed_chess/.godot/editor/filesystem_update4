@@ -1,6 +1,2 @@
-res://scripts/logic/game_manager.gd
-res://scripts/logic/piece_instance.gd
-res://scripts/logic/upgrade_registry.gd
-res://scripts/logic/board_manager.gd
 res://scripts/logic/board_renderer.gd
-res://scripts/logic/move_validator.gd
+res://scripts/logic/game_manager.gd

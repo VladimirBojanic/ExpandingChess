@@ -46,6 +46,14 @@ func _select(piece: PieceInstance) -> void:
 	var captures := move_validator.get_legal_captures(piece, board)
 	renderer.set_selection(piece.anchor_cell, moves, captures)
 
+	# Highlight bridge-start tiles among legal moves in a distinct colour
+	renderer.bridge_move_cells = []
+	if piece.has_tag("bridge_builder"):
+		for pos in moves:
+			if board.is_bridge_start_tile(pos):
+				renderer.bridge_move_cells.append(pos)
+	renderer.queue_redraw()
+
 func _deselect() -> void:
 	_selected_piece = null
 	renderer.clear_selection()

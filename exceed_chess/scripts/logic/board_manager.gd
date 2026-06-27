@@ -80,14 +80,15 @@ func is_bridge_start_tile(pos: Vector2i) -> bool:
 	var cell := get_cell(pos)
 	if not cell:
 		return false
-	var island := get_island(cell.island_id)
-	if not island:
-		return false
-	# A cell is a bridge-start tile if it is on the edge of its island
-	# (has at least one orthogonal neighbor that is not a valid cell)
-	for dir in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
-		if not is_valid_cell(pos + dir):
-			return true
+	var my_island := cell.island_id
+	var bst_dirs: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
+	for dir: Vector2i in bst_dirs:
+		var neighbor: Vector2i = pos + dir
+		if not is_valid_cell(neighbor):
+			return true  # adjacent to void
+		var nc := get_cell(neighbor)
+		if nc and nc.island_id != my_island:
+			return true  # adjacent to a different island
 	return false
 
 # ── Piece placement (atomic) ──────────────────────────────────────────────────
@@ -224,6 +225,28 @@ func get_portals_for_player(player_id: int) -> Array[PortalState]:
 			result.append(portal)
 	return result
 
+func recompute_islands() -> void:
+	for pos in cells:
+		cells[pos].island_id = -1
+	islands.clear()
+	_next_island_id = 0
+	var dirs: Array[Vector2i] = [Vector2i(1,0), Vector2i(-1,0), Vector2i(0,1), Vector2i(0,-1)]
+	for start_pos in cells:
+		if cells[start_pos].island_id != -1:
+			continue
+		var island := _new_island()
+		var frontier: Array[Vector2i] = [start_pos]
+		while not frontier.is_empty():
+			var pos: Vector2i = frontier.pop_back()
+			if not cells.has(pos) or cells[pos].island_id != -1:
+				continue
+			cells[pos].island_id = island.id
+			island.cells.append(pos)
+			for dir in dirs:
+				var nb := pos + dir
+				if cells.has(nb) and cells[nb].island_id == -1:
+					frontier.append(nb)
+
 func get_all_pieces() -> Array[PieceInstance]:
 	var seen: Array[PieceInstance] = []
 	for cell in cells.values():
@@ -235,6 +258,9 @@ func get_pieces_for_player(player_id: int) -> Array[PieceInstance]:
 	return get_all_pieces().filter(func(p): return p.owner_id == player_id)
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+func new_island() -> IslandState:
+	return _new_island()
 
 func _new_island() -> IslandState:
 	var island := IslandState.new()

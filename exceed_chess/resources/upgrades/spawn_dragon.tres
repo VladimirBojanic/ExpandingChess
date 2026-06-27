@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="UpgradeDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/resources/upgrade_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "spawn_dragon"
+display_name = "Summon Dragon"
+sp_cost = 25
+phase_required = 0
+eligible_piece_tags = []
+transforms_to = "dragon"
+added_movement = []
+added_abilities = []
+removed_ability_ids = []
+added_tags = []
+removed_tags = []

@@ -27,6 +27,11 @@ var legal_captures: Array[Vector2i] = []
 var check_cell: Vector2i = Vector2i(-1, -1)
 var upgrade_targets: Array[Vector2i] = []
 var _open_portal_cells: Array[Vector2i] = []
+var bridge_move_cells: Array[Vector2i] = []  # edge cells that would start a bridge if moved to
+
+# Per-island visual offsets — applied after Sinister splits drift islands apart.
+# Dictionary: island_id (int) → Vector2 (pixel offset)
+var _island_offsets: Dictionary = {}
 
 func _ready() -> void:
 	EventBus.island_added.connect(_on_board_changed)
@@ -39,6 +44,9 @@ func _ready() -> void:
 	EventBus.check_resolved.connect(_on_check_resolved)
 	EventBus.portal_opened.connect(_on_portal_opened)
 	EventBus.portal_closed.connect(_on_portal_closed)
+
+func get_board_origin() -> Vector2:
+	return _board_origin
 
 func initialize(board_manager: BoardManager) -> void:
 	board = board_manager
@@ -55,6 +63,7 @@ func clear_selection() -> void:
 	selected_cell = Vector2i(-1, -1)
 	legal_moves = []
 	legal_captures = []
+	bridge_move_cells = []
 	queue_redraw()
 
 func set_upgrade_targets(cells: Array) -> void:
@@ -68,6 +77,13 @@ func clear_upgrade_targets() -> void:
 	queue_redraw()
 
 func cell_at_screen(screen_pos: Vector2) -> Vector2i:
+	if not _island_offsets.is_empty() and board:
+		# After a sinister split, tiles are no longer on a uniform grid — check each one
+		for pos in board.cells:
+			if _cell_rect(pos).has_point(screen_pos):
+				return pos
+		return Vector2i(-1, -1)
+	# Fast path before any split: simple grid math
 	var local_pos := screen_pos - _board_origin
 	var col := int(local_pos.x / CELL_SIZE)
 	var row := int(local_pos.y / CELL_SIZE)
@@ -75,7 +91,7 @@ func cell_at_screen(screen_pos: Vector2) -> Vector2i:
 
 func cell_center(cell: Vector2i) -> Vector2:
 	return _board_origin + Vector2(cell.x * CELL_SIZE + CELL_SIZE * 0.5,
-	                               cell.y * CELL_SIZE + CELL_SIZE * 0.5)
+								   cell.y * CELL_SIZE + CELL_SIZE * 0.5)
 
 func _draw() -> void:
 	if not board:
@@ -83,7 +99,8 @@ func _draw() -> void:
 	_draw_cells()
 	_draw_highlights()
 	_draw_pieces()
-	_draw_coordinates()
+	if _island_offsets.is_empty():
+		_draw_coordinates()
 
 func _draw_cells() -> void:
 	for pos in board.cells:
@@ -96,7 +113,12 @@ func _draw_cells() -> void:
 			BoardManager.CellType.RELIC:
 				color = COLORS["relic_tile"]
 			_:
-				color = COLORS["light_cell"] if (pos.x + pos.y) % 2 == 0 else COLORS["dark_cell"]
+				if _island_offsets.is_empty():
+					# Pre-sinister: classic chess checkerboard
+					color = COLORS["light_cell"] if (pos.x + pos.y) % 2 == 0 else COLORS["dark_cell"]
+				else:
+					# Post-sinister: uniform island shading, no chess pattern
+					color = Color(0.45, 0.60, 0.45) if (pos.x + pos.y) % 2 == 0 else Color(0.30, 0.45, 0.30)
 		draw_rect(rect, color)
 		draw_rect(rect, Color.BLACK, false, 1.0)
 
@@ -109,7 +131,15 @@ func _draw_highlights() -> void:
 	if selected_cell != Vector2i(-1, -1) and board.is_valid_cell(selected_cell):
 		draw_rect(_cell_rect(selected_cell), COLORS["selected"])
 
+	for pos in bridge_move_cells:
+		if pos not in legal_moves:
+			continue
+		draw_rect(_cell_rect(pos), COLORS["bridge_tile"])
+		_draw_dot(pos, Color(0.9, 0.75, 0.3))
+
 	for pos in legal_moves:
+		if pos in bridge_move_cells:
+			continue  # already drawn above
 		if pos == selected_cell:
 			# Mage's own cell = portal toggle action
 			draw_rect(_cell_rect(pos), COLORS["portal_toggle"])
@@ -137,8 +167,17 @@ func _draw_pieces() -> void:
 		var w := anchor_rect.size.x * piece.definition.size.x
 		var h := anchor_rect.size.y * piece.definition.size.y
 		var full_rect := Rect2(anchor_rect.position, Vector2(w, h))
-		var piece_color := Color(0.85, 0.85, 0.95) if piece.owner_id == 0 else Color(0.15, 0.12, 0.18)
-		var border_color := Color(0.3, 0.3, 0.4) if piece.owner_id == 0 else Color(0.7, 0.7, 0.8)
+		var piece_color: Color
+		var border_color: Color
+		if piece.owner_id == -1:
+			piece_color = Color(0.55, 0.10, 0.10)
+			border_color = Color(1.0, 0.4, 0.4)
+		elif piece.owner_id == 0:
+			piece_color = Color(0.85, 0.85, 0.95)
+			border_color = Color(0.3, 0.3, 0.4)
+		else:
+			piece_color = Color(0.15, 0.12, 0.18)
+			border_color = Color(0.7, 0.7, 0.8)
 		var inset := full_rect.grow(-6.0)
 		draw_rect(inset, piece_color)
 		draw_rect(inset, border_color, false, 2.0)
@@ -172,8 +211,19 @@ func _draw_coordinates() -> void:
 		var y := _board_origin.y + row * CELL_SIZE + CELL_SIZE * 0.5 + 4
 		draw_string(font, Vector2(_board_origin.x - 16, y), label, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color.LIGHT_GRAY)
 
+func set_island_offsets(offsets: Dictionary) -> void:
+	_island_offsets = offsets
+	_recalculate_origin()
+	queue_redraw()
+
+func _raw_cell_offset(pos: Vector2i) -> Vector2:
+	# Position WITHOUT board_origin — used internally for bounds calculation
+	var island_id := board.get_island_id(pos) if board else -1
+	var island_shift: Vector2 = _island_offsets.get(island_id, Vector2.ZERO)
+	return Vector2(pos.x, pos.y) * CELL_SIZE + island_shift
+
 func _cell_rect(pos: Vector2i) -> Rect2:
-	return Rect2(_board_origin + Vector2(pos.x, pos.y) * CELL_SIZE, Vector2(CELL_SIZE, CELL_SIZE))
+	return Rect2(_board_origin + _raw_cell_offset(pos), Vector2(CELL_SIZE, CELL_SIZE))
 
 func _draw_dot(pos: Vector2i, color: Color) -> void:
 	draw_circle(_cell_rect(pos).get_center(), 10.0, color)
@@ -181,21 +231,21 @@ func _draw_dot(pos: Vector2i, color: Color) -> void:
 func _piece_label(piece: PieceInstance) -> String:
 	var labels := {
 		"pawn": "P", "knight": "N", "bishop": "B", "rook": "R",
-		"queen": "Q", "king": "K", "mage": "M", "dragon": "DRG", "hydra": "HYD",
+		"queen": "Q", "king": "K", "mage": "M",
+			"dragon": "DRG", "hydra": "HYD", "neutral_monster": "BST",
 	}
 	return labels.get(piece.definition.id, piece.definition.id.substr(0, 3).to_upper())
 
 func _recalculate_origin() -> void:
 	if not board or board.cells.is_empty():
 		return
-	var min_col := 9999
-	var min_row := 9999
+	var min_x := 99999.0
+	var min_y := 99999.0
 	for pos in board.cells:
-		if pos.x < min_col:
-			min_col = pos.x
-		if pos.y < min_row:
-			min_row = pos.y
-	_board_origin = Vector2(-min_col * CELL_SIZE, -min_row * CELL_SIZE) + Vector2(40, 40)
+		var raw := _raw_cell_offset(pos)
+		if raw.x < min_x: min_x = raw.x
+		if raw.y < min_y: min_y = raw.y
+	_board_origin = Vector2(-min_x, -min_y) + Vector2(40, 40)
 
 func _on_board_changed(_a = null, _b = null) -> void:
 	_recalculate_origin()

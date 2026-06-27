@@ -186,7 +186,6 @@ func _l_shape(piece: PieceInstance, board: BoardManager, rule: MovementRule, cap
 	return result
 
 func _block_slide(piece: PieceInstance, board: BoardManager, rule: MovementRule, capture_pass: bool) -> Array[Vector2i]:
-	# Entire multi-cell piece slides as a block. Only orthogonal in MVP.
 	var result: Array[Vector2i] = []
 	for dir in rule.directions:
 		var new_anchor := piece.anchor_cell + dir
@@ -196,17 +195,24 @@ func _block_slide(piece: PieceInstance, board: BoardManager, rule: MovementRule,
 			if not _block_can_fit(piece, board, new_anchor):
 				break
 			var occupants := _block_occupants(piece, board, new_anchor)
-			var enemy_occupants := occupants.filter(func(o): return o.owner_id != piece.owner_id)
+			# Separate: pieces that get swept (Dragon slides through) vs pieces that block
 			var swept := _apply_sweep(piece, board, new_anchor, dir, rule)
-			if enemy_occupants.is_empty():
+			var blocking := occupants.filter(func(o): return o not in swept and o.owner_id != piece.owner_id)
+			var friendly_blocking := occupants.filter(func(o): return o not in swept and o.owner_id == piece.owner_id)
+
+			if not friendly_blocking.is_empty():
+				break  # can't move through own pieces
+
+			if blocking.is_empty():
+				# Path clear (may contain swept-tag pieces which are ignored)
 				if not capture_pass:
 					result.append(new_anchor)
 				new_anchor += dir
 				steps += 1
 			else:
-				# Block stops here; can hit (if capture pass)
+				# A non-swept enemy blocks here — Dragon can hit it but not pass
 				if capture_pass:
-					for occ in enemy_occupants:
+					for occ in blocking:
 						if not _is_immune(occ, piece):
 							result.append(new_anchor)
 				break
