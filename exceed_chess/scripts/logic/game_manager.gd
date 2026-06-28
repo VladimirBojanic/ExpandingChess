@@ -765,7 +765,7 @@ func _spawn_neutral_monster_at(relic_pos: Vector2i) -> void:
 
 func _tick_neutral_monsters() -> void:
 	var dirs: Array[Vector2i] = [Vector2i(1,0), Vector2i(-1,0), Vector2i(0,1), Vector2i(0,-1),
-	                              Vector2i(1,1), Vector2i(-1,1), Vector2i(1,-1), Vector2i(-1,-1)]
+								  Vector2i(1,1), Vector2i(-1,1), Vector2i(1,-1), Vector2i(-1,-1)]
 	for piece in board.get_all_pieces():
 		if piece.owner_id != -1:
 			continue
